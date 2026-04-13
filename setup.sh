@@ -48,7 +48,12 @@ start_service() {
         done
     fi
 
-    nohup uvicorn "$APP" --host 0.0.0.0 --port "$PORT" > "$LOGFILE" 2>&1 &
+    CERT_DIR="$SCRIPT_DIR/../certs"
+    VENV_UVICORN="/home/test/.virtualenvs/search/bin/uvicorn"
+    nohup "$VENV_UVICORN" "$APP" --host 0.0.0.0 --port "$PORT" \
+        --ssl-certfile "$CERT_DIR/cert.pem" \
+        --ssl-keyfile  "$CERT_DIR/key.pem" \
+        > "$LOGFILE" 2>&1 &
     echo $! > "$PIDFILE"
     sleep 1
 
@@ -56,7 +61,7 @@ start_service() {
         local ip
         ip=$(get_local_ip)
         echo "  ✅  Service started (PID $(cat $PIDFILE))"
-        echo "  🌐  API: http://$ip:$PORT/api"
+        echo "  🌐  API: https://$ip:$PORT/api"
         echo "  📄  Logs: $LOGFILE"
     else
         echo "  ❌  Failed to start — check $LOGFILE for details"
@@ -71,11 +76,11 @@ service_status() {
         pid=$(cat "$PIDFILE")
         ip=$(get_local_ip)
         echo "  ✅  Service is running (PID $pid)"
-        echo "  🌐  http://$ip:$PORT/api"
+        echo "  🌐  https://$ip:$PORT/api"
 
         # Quick health check
         local health
-        health=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:$PORT/api/health" 2>/dev/null)
+        health=$(curl -sk -o /dev/null -w "%{http_code}" "https://127.0.0.1:$PORT/api/health" 2>/dev/null)
         if [ "$health" = "200" ]; then
             echo "  💚  Health check: OK (HTTP 200)"
         else
@@ -105,16 +110,16 @@ show_api_url() {
     echo ""
     local ip
     ip=$(get_local_ip)
-    echo "  🌐  Base URL : http://$ip:$PORT"
+    echo "  🌐  Base URL : https://$ip:$PORT"
     echo ""
     echo "  Endpoints:"
-    echo "    GET  http://$ip:$PORT/api/search?q=<query>"
-    echo "    GET  http://$ip:$PORT/api/stats"
-    echo "    GET  http://$ip:$PORT/api/health"
+    echo "    GET  https://$ip:$PORT/api/search?q=<query>"
+    echo "    GET  https://$ip:$PORT/api/stats"
+    echo "    GET  https://$ip:$PORT/api/health"
     echo ""
     echo "  Docs:"
-    echo "    Swagger UI : http://$ip:$PORT/docs"
-    echo "    OpenAPI    : http://$ip:$PORT/openapi.json"
+    echo "    Swagger UI : https://$ip:$PORT/docs"
+    echo "    OpenAPI    : https://$ip:$PORT/openapi.json"
     echo ""
 }
 
